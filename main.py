@@ -100,12 +100,8 @@ if __name__ == "__main__":
     train_Parasitized_dir = os.path.join(train_dir, 'Parasitized')
     datagen = ImageDataGenerator(
         rescale=1. / 255,
-        samplewise_center=True,
-        samplewise_std_normalization=True,
-        channel_shift_range=50,
-        zoom_range=0.05,
-        rotation_range=90,
-        shear_range=0.5,
+        rotation_range=270,
+        shear_range=0.2,
         horizontal_flip=True,
         vertical_flip=True,
     )
@@ -119,12 +115,8 @@ if __name__ == "__main__":
     """ 实例化训练生成器和验证生成器 """
     train_datagen = ImageDataGenerator(
         rescale=1. / 255,
-        samplewise_center=True,
-        samplewise_std_normalization=True,
-        channel_shift_range=50,
-        zoom_range=0.05,
-        rotation_range=90,
-        shear_range=0.5,
+        rotation_range=270,
+        shear_range=0.2,
         horizontal_flip=True,
         vertical_flip=True,
     )
