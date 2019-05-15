@@ -98,13 +98,15 @@ if __name__ == "__main__":
     validation_dir = './pics/val/'
     test_dir = './pics/test/'
     train_Parasitized_dir = os.path.join(train_dir, 'Parasitized')
-    datagen = ImageDataGenerator(rotation_range=40,
-                                 width_shift_range=0.2,
-                                 height_shift_range=0.2,
-                                 shear_range=0.2,
-                                 zoom_range=0.2,
-                                 horizontal_flip=True,
-                                 fill_mode='nearest')
+    datagen = ImageDataGenerator(
+        rotation_range=40,
+        width_shift_range=0.2,
+        height_shift_range=0.2,
+        shear_range=0.2,
+        zoom_range=0.2,
+        horizontal_flip=True,
+        fill_mode='nearest',
+    )
 
     """ 打印增强的图片 """
     show_enhanced_image(datagen, train_Parasitized_dir)
@@ -113,33 +115,45 @@ if __name__ == "__main__":
     model = bulid_model()
 
     """ 实例化训练生成器和验证生成器 """
-    train_datagen = ImageDataGenerator(rescale=1. / 255,
-                                       rotation_range=40,
-                                       width_shift_range=0.2,
-                                       height_shift_range=0.2,
-                                       shear_range=0.2,
-                                       zoom_range=0.2,
-                                       horizontal_flip=True, )
+    train_datagen = ImageDataGenerator(
+        rescale=1. / 255,
+        rotation_range=40,
+        width_shift_range=0.2,
+        height_shift_range=0.2,
+        shear_range=0.2,
+        zoom_range=0.2,
+        horizontal_flip=True,
+    )
     validation_datagen = ImageDataGenerator(rescale=1. / 255)
-    train_generator = train_datagen.flow_from_directory(train_dir,
-                                                        target_size=(150, 150),
-                                                        batch_size=32,
-                                                        class_mode='binary')
-    validation_generator = validation_datagen.flow_from_directory(validation_dir,
-                                                                  target_size=(150, 150),
-                                                                  batch_size=32,
-                                                                  class_mode='binary')
+    train_generator = train_datagen.flow_from_directory(
+        train_dir,
+        target_size=(150, 150),
+        batch_size=32,
+        class_mode='binary',
+    )
+    validation_generator = validation_datagen.flow_from_directory(
+        validation_dir,
+        target_size=(150, 150),
+        batch_size=32,
+        class_mode='binary',
+    )
 
     """ 使用数据增强的方式，训练网络 """
     tensorboad = TensorBoard()
-    checkpoint = ModelCheckpoint(filepath='dropout_Adam.h5', monitor='val_acc', mode='auto', save_best_only='True')
-    history = model.fit_generator(train_generator,
-                                  steps_per_epoch=100,
-                                  epochs=132,
-                                  verbose=2,
-                                  validation_data=validation_generator,
-                                  validation_steps=50,
-                                  callbacks=[tensorboad, checkpoint])
+    checkpoint = ModelCheckpoint(
+        filepath='dropout_Adam.h5',
+        monitor='val_acc',
+        mode='auto',
+        save_best_only='True')
+    history = model.fit_generator(
+        train_generator,
+        steps_per_epoch=100,
+        epochs=132,
+        verbose=2,
+        validation_data=validation_generator,
+        validation_steps=50,
+        callbacks=[tensorboad, checkpoint]
+    )
 
     """ 显示训练结果 """
     show_results(history)
