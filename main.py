@@ -1,6 +1,6 @@
 import os
 from keras import layers, models, optimizers
-from keras.callbacks import TensorBoard, ModelCheckpoint
+from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau
 from keras.preprocessing import image
 from keras.preprocessing.image import ImageDataGenerator
 import matplotlib.pyplot as plt
@@ -13,8 +13,7 @@ def show_enhanced_image(datagen, image_dir):
     :param image_dir: 图片文件夹
     :return:
     """
-    fnames = [os.path.join(image_dir, fname) for
-              fname in os.listdir(image_dir)]
+    fnames = [os.path.join(image_dir, fname) for fname in os.listdir(image_dir)]
     img_path = fnames[2]
     img = image.load_img(img_path, target_size=(150, 150))
     x = image.img_to_array(img)
@@ -22,11 +21,10 @@ def show_enhanced_image(datagen, image_dir):
     i = 0
     for batch in datagen.flow(x, batch_size=1):
         plt.figure(i)
-        imgplot = plt.imshow(image.array_to_img(batch[0]))
+        plt.imshow(image.array_to_img(batch[0]))
         i += 1
         if i % 4 == 0:
             break
-
     plt.show()
 
 
@@ -37,7 +35,7 @@ def bulid_model():
     二分类问题最终使用sigmod激活
     """
     model = models.Sequential()
-    model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3)))
+    model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(128, 128, 3)))
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Conv2D(64, (3, 3), activation='relu'))
     model.add(layers.MaxPooling2D((2, 2)))
@@ -67,10 +65,13 @@ def create_generator(dir):
     :return: 返回一个生成器
     """
     dir_datagen = ImageDataGenerator(rescale=1. / 255)  # 将所有图像乘以1/255缩放
-    generator = dir_datagen.flow_from_directory(dir,
-                                                target_size=(150, 150),  # 图片大小调整为150 * 150
-                                                batch_size=20,
-                                                class_mode='binary')  # 使用二进制
+    generator = dir_datagen.flow_from_directory(
+        dir,
+        target_size=(128, 128),  # 图片大小调整为128 * 128
+        batch_size=64,
+        class_mode='binary',
+        interpolation='lanczos',
+    )  # 使用二进制
     return generator
 
 
@@ -96,16 +97,17 @@ if __name__ == "__main__":
     """ 创建训练和验证集的目录 """
     train_dir = './pics/train/'
     validation_dir = './pics/val/'
-    test_dir = './pics/test/'
     train_Parasitized_dir = os.path.join(train_dir, 'Parasitized')
     datagen = ImageDataGenerator(
-        rotation_range=40,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        shear_range=0.2,
-        zoom_range=0.2,
+        rescale=1. / 255,
+        samplewise_center=True,
+        samplewise_std_normalization=True,
+        channel_shift_range=50,
+        zoom_range=0.05,
+        rotation_range=90,
+        shear_range=0.5,
         horizontal_flip=True,
-        fill_mode='nearest',
+        vertical_flip=True,
     )
 
     """ 打印增强的图片 """
@@ -117,42 +119,52 @@ if __name__ == "__main__":
     """ 实例化训练生成器和验证生成器 """
     train_datagen = ImageDataGenerator(
         rescale=1. / 255,
-        rotation_range=40,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        shear_range=0.2,
-        zoom_range=0.2,
+        samplewise_center=True,
+        samplewise_std_normalization=True,
+        channel_shift_range=50,
+        zoom_range=0.05,
+        rotation_range=90,
+        shear_range=0.5,
         horizontal_flip=True,
+        vertical_flip=True,
     )
     validation_datagen = ImageDataGenerator(rescale=1. / 255)
     train_generator = train_datagen.flow_from_directory(
         train_dir,
-        target_size=(150, 150),
-        batch_size=32,
+        target_size=(128, 128),
+        batch_size=64,
         class_mode='binary',
+        interpolation='lanczos',
     )
     validation_generator = validation_datagen.flow_from_directory(
         validation_dir,
-        target_size=(150, 150),
-        batch_size=32,
+        target_size=(128, 128),
+        batch_size=64,
         class_mode='binary',
+        interpolation='lanczos',
+    )
+
+    """ 配置回调函数 """
+    tensorboad = TensorBoard()
+    checkpoint = ModelCheckpoint(
+        filepath='dropout_Adam_lanczos.h5',
+        save_best_only='True',
+    )
+    reduce_lr = ReduceLROnPlateau(
+        factor=0.5,
+        verbose=1,
+        min_lr=0.0001,
     )
 
     """ 使用数据增强的方式，训练网络 """
-    tensorboad = TensorBoard()
-    checkpoint = ModelCheckpoint(
-        filepath='dropout_Adam.h5',
-        monitor='val_acc',
-        mode='auto',
-        save_best_only='True')
     history = model.fit_generator(
         train_generator,
-        steps_per_epoch=100,
-        epochs=132,
+        steps_per_epoch=240,
+        epochs=50,
         verbose=2,
+        callbacks=[tensorboad, checkpoint, reduce_lr],
         validation_data=validation_generator,
-        validation_steps=50,
-        callbacks=[tensorboad, checkpoint]
+        validation_steps=100,
     )
 
     """ 显示训练结果 """
