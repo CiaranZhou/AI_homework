@@ -1,31 +1,7 @@
-import os
 from keras import layers, models, optimizers
 from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau
-from keras.preprocessing import image
 from keras.preprocessing.image import ImageDataGenerator
 import matplotlib.pyplot as plt
-
-
-def show_enhanced_image(datagen, image_dir):
-    """
-    :函数功能: 显示数据增强后的图片
-    :param datagen: 数据生成器
-    :param image_dir: 图片文件夹
-    :return:
-    """
-    fnames = [os.path.join(image_dir, fname) for fname in os.listdir(image_dir)]
-    img_path = fnames[2]
-    img = image.load_img(img_path, target_size=(150, 150))
-    x = image.img_to_array(img)
-    x = x.reshape((1,) + x.shape)
-    i = 0
-    for batch in datagen.flow(x, batch_size=1):
-        plt.figure(i)
-        plt.imshow(image.array_to_img(batch[0]))
-        i += 1
-        if i % 4 == 0:
-            break
-    plt.show()
 
 
 def bulid_model():
@@ -57,24 +33,6 @@ def bulid_model():
     return model
 
 
-def create_generator(dir):
-    """
-    创建数据生成器，这个生成器的作用是，将JPEG解码为RGB像素网格，然后将这些像素网格转换为浮点数向量，
-    然后将像素值(0~255范围内)缩放到[0,1]区间。
-    :param dir: 数据所在的目录
-    :return: 返回一个生成器
-    """
-    dir_datagen = ImageDataGenerator(rescale=1. / 255)  # 将所有图像乘以1/255缩放
-    generator = dir_datagen.flow_from_directory(
-        dir,
-        target_size=(128, 128),  # 图片大小调整为128 * 128
-        batch_size=64,
-        class_mode='binary',
-        interpolation='lanczos',
-    )  # 使用二进制
-    return generator
-
-
 def show_results(history):
     acc = history.history['acc']
     val_acc = history.history['val_acc']
@@ -97,35 +55,30 @@ if __name__ == "__main__":
     """ 创建训练和验证集的目录 """
     train_dir = './pics/train/'
     validation_dir = './pics/val/'
-    train_Parasitized_dir = os.path.join(train_dir, 'Parasitized')
-    datagen = ImageDataGenerator(
-        rescale=1. / 255,
-        rotation_range=270,
-        shear_range=0.2,
-        horizontal_flip=True,
-        vertical_flip=True,
-    )
-
-    """ 打印增强的图片 """
-    show_enhanced_image(datagen, train_Parasitized_dir)
 
     """ 构建网络 """
     model = bulid_model()
 
     """ 实例化训练生成器和验证生成器 """
+    """
+    创建数据生成器，这个生成器的作用是，将JPEG解码为RGB像素网格，然后将这些像素网格转换为浮点数向量，
+    然后将像素值(0~255范围内)缩放到[0,1]区间。
+    :param dir: 数据所在的目录
+    :return: 返回一个生成器
+    """
     train_datagen = ImageDataGenerator(
-        rescale=1. / 255,
-        rotation_range=270,
-        shear_range=0.2,
-        horizontal_flip=True,
-        vertical_flip=True,
+        rescale=1. / 255,  # 将所有图像乘以1/255缩放
+        rotation_range=270,  # 旋转角度范围
+        shear_range=0.2,  # 剪切范围
+        horizontal_flip=True,  # 水平翻转
+        vertical_flip=True,  # 垂直翻转
     )
     validation_datagen = ImageDataGenerator(rescale=1. / 255)
     train_generator = train_datagen.flow_from_directory(
         train_dir,
-        target_size=(128, 128),
+        target_size=(128, 128),  # 图片大小调整为128*128
         batch_size=64,
-        class_mode='binary',
+        class_mode='binary',  # 使用二进制
         interpolation='lanczos',
     )
     validation_generator = validation_datagen.flow_from_directory(
@@ -137,15 +90,15 @@ if __name__ == "__main__":
     )
 
     """ 配置回调函数 """
-    tensorboad = TensorBoard()
+    tensorboad = TensorBoard()  # 可视化
     checkpoint = ModelCheckpoint(
-        filepath='dropout_Adam_lanczos.h5',
-        save_best_only='True',
+        filepath='dropout_Adam_lanczos.h5',  # 模型文件名称
+        save_best_only='True',  # 选择保留最好的模型,默认取val_loss最小的那个,patience取默认值10
     )
-    reduce_lr = ReduceLROnPlateau(
-        factor=0.5,
-        verbose=1,
-        min_lr=0.0001,
+    reduce_lr = ReduceLROnPlateau(  # 设置当指定值不再变动时降低学习率,指定值取默认值val_loss
+        factor=0.5,  # 降低为原学习率的0.5
+        verbose=1,  # 降低学习率时输出日志
+        min_lr=0.0001,  # 设置学习率下限
     )
 
     """ 使用数据增强的方式，训练网络 """
