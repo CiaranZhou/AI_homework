@@ -79,7 +79,7 @@ if __name__ == "__main__":
         target_size=(128, 128),  # 图片大小调整为128*128
         batch_size=64,
         class_mode='binary',  # 使用二进制
-        interpolation='lanczos',
+        interpolation='lanczos',  # 使用lanczos方法填补像素,速度最慢但效果最好
     )
     validation_generator = validation_datagen.flow_from_directory(
         validation_dir,
@@ -93,9 +93,9 @@ if __name__ == "__main__":
     tensorboad = TensorBoard()  # 可视化
     checkpoint = ModelCheckpoint(
         filepath='dropout_Adam_lanczos.h5',  # 模型文件名称
-        save_best_only='True',  # 选择保留最好的模型,默认取val_loss最小的那个,patience取默认值10
+        save_best_only='True',  # 选择保留最好的模型,默认取val_loss最小的那个
     )
-    reduce_lr = ReduceLROnPlateau(  # 设置当指定值不再变动时降低学习率,指定值取默认值val_loss
+    reduce_lr = ReduceLROnPlateau(  # 设置当指定值不再变动时降低学习率,指定值取默认值val_loss,patience取默认值10
         factor=0.5,  # 降低为原学习率的0.5
         verbose=1,  # 降低学习率时输出日志
         min_lr=0.0001,  # 设置学习率下限
@@ -104,12 +104,12 @@ if __name__ == "__main__":
     """ 使用数据增强的方式，训练网络 """
     history = model.fit_generator(
         train_generator,
-        steps_per_epoch=240,
-        epochs=50,
-        verbose=2,
-        callbacks=[tensorboad, checkpoint, reduce_lr],
-        validation_data=validation_generator,
-        validation_steps=100,
+        steps_per_epoch=240,  # 训练集样本数//batch_size
+        epochs=50,  # 设置每个样本训练的次数为一个适中的值,这里设置为50次
+        verbose=2,  # 只显示每次epoch的结果,减少无用信息
+        callbacks=[tensorboad, checkpoint, reduce_lr],  # 导入回调函数
+        validation_data=validation_generator,  # 设置验证集
+        validation_steps=100,  # 验证集样本数//batch_size
     )
 
     """ 显示训练结果 """
